@@ -22,16 +22,22 @@ public struct EncodingEncaError: Error, LocalizedError {
 public struct EncodingWrapper {
     public let data: Data
     public let style: NameStyle
+    public let language: Language
     
     /// Initializes an `EncodingWrapper` with the provided data.
     /// - Parameter data: The data to be analyzed for encoding detection.
-    public init(_ data: Data, style: NameStyle = .enca) {
+    public init(_ data: Data, style: NameStyle = .enca, language: Language = .zh) {
         self.data = data
         self.style = .enca
+        self.language = language
     }
     
     public func style(_ value: NameStyle) -> Self {
-        .init(data, style: value)
+        .init(data, style: value, language: language)
+    }
+    
+    public func language(_ value: Language) -> Self {
+        .init(data, style: style, language: value)
     }
     
     func error(on analyser: EncaAnalyser) throws {
@@ -47,8 +53,8 @@ public struct EncodingWrapper {
         }
     }
     
-    /// Detects the encoding of the wrapped data and returns the encoding name as an asynchronous operation.
-    /// - Returns: An asynchronous operation that resolves to the detected encoding name.
+    /// Detects the encoding of the wrapped data and returns the encoding name as an synchronous operation.
+    /// - Returns: An synchronous operation that resolves to the detected encoding name.
     public func encodingString() throws -> String {
         let analyser = try analyserAlloctor()
         let buffer = try UnsafeMemory(data).unsafePointerUInt8()
@@ -76,8 +82,8 @@ public struct EncodingWrapper {
         }
     }
     
-    /// Detects the encoding of the wrapped data and returns the encoding as an asynchronous operation.
-    /// - Returns: An asynchronous operation that resolves to the detected `String.Encoding`.
+    /// Detects the encoding of the wrapped data and returns the encoding as an synchronous operation.
+    /// - Returns: An synchronous operation that resolves to the detected `String.Encoding`.
     public func encoding() throws -> String.Encoding {
         let name = try encodingString()
         return EncodingMapper(name).paltformEncoding()
@@ -101,8 +107,7 @@ public struct EncodingWrapper {
        /// - Returns: An enca analyser instance.
     @usableFromInline
     func analyserAlloctor() throws -> EncaAnalyser {
-        // None
-        let language = "zh"
+        let language = language.rawValue
         var none = language.cString(using: .ascii)!
         let analyser = enca_analyser_alloc(&none)
         guard let analyser = analyser else {
@@ -130,8 +135,40 @@ public struct EncodingWrapper {
         }
         return String(cString: charsetCString)
     }
+    
+    /// Detects all language the encoding of the wrapped data and returns the encoding name guess
+    /// - Returns: An synchronous operation that resolves to the detected encoding name.
+    public func guessAllLanguageFoEncodingString() throws -> String {
+        let languages = Language.all
+        
+        var _error: Error?
+        
+        for item in languages {
+            do {
+                return try language(item).encodingString()
+            } catch {
+                logger.info("language \(item) unable find encoding for string.")
+                _error = error
+            }
+        }
+        
+        throw _error ?? EncodingEncaError(code: -1, message: "Unknown Error.")
+    }
+    
+    /// Detects all language the encoding of the wrapped data and returns the encoding name guess
+    /// - Returns: An asynchronous operation that resolves to the detected encoding name.
+    @available(macOS 10.15.0, *)
+    public func guessAllLanguageFoEncodingString() async throws -> String {
+        try await withCheckedThrowingContinuation { continuation in
+            do {
+                let value = try guessAllLanguageFoEncodingString()
+                continuation.resume(returning: value)
+            } catch {
+                continuation.resume(throwing: error)
+            }
+        }
+    }
 }
-
 
 struct UnsafeMemory {
     let data: Data

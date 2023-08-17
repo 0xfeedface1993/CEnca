@@ -8,4 +8,11 @@ final class CEncaTests: XCTestCase {
         let next = try await EncodingWrapper(data).encoding()
         XCTAssertEqual(next, encoding)
     }
+    
+    func testAllEncoding() async throws {
+        let encoding = String.Encoding.unicode
+        let data = "你好hellowprdzzz.he,l".data(using: encoding)!
+        let next = try await EncodingWrapper(data).guessAllLanguageFoEncodingString()
+        XCTAssertEqual(next, "UCS-2")
+    }
 }

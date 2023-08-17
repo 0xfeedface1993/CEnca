@@ -152,3 +152,54 @@ struct EncodingMapper {
         }
     }
 }
+
+public enum Language: String {
+    /// chinese
+    case zh
+    /// belarusian
+    case be
+    /// bulgarian
+    case bg
+    /// czech
+    case cs
+    /// estonian
+    case et
+    /// croatian
+    case hr
+    /// hungarian
+    case hu
+    /// lithuanian
+    case lt
+    /// latvian
+    case lv
+    /// polish
+    case pl
+    /// russian
+    case ru
+    /// slovak
+    case sk
+    /// slovene
+    case sl
+    /// ukrainian
+    case uk
+    /// none
+    case none = "__"
+    
+    public static var all: [Language] = [
+        .zh,
+        .be,
+        .bg,
+        .cs,
+        .et,
+        .hr,
+        .hu,
+        .lt,
+        .lv,
+        .pl,
+        .ru,
+        .sk,
+        .sl,
+        .uk,
+        .none
+    ]
+}
