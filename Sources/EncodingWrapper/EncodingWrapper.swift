@@ -226,10 +226,3 @@ extension EncodingWrapper {
         }
     }
 }
-
-extension CFStringEncodings {
-    /// Computed property that returns the corresponding String.Encoding for a given CFStringEncodings value.
-    public var mappingEncoding: String.Encoding {
-        .init(rawValue: UInt(rawValue))
-    }
-}
