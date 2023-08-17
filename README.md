@@ -1,71 +1,79 @@
 # EncodingWrapper
 
-The `EncodingWrapper` module provides a Swift wrapper around the `enca` library, allowing you to easily detect the encoding of a given data payload (string data). This module abstracts the low-level interactions with the `enca` library and offers a more user-friendly API for encoding detection.
-
-## Features
-
-- Detect the encoding of a `Data` payload using the `enca` library.
-- Translate the detected encoding name to a `String.Encoding` value. (**Testing now**)
-
-## Requirements
-
-- macOS 10.15 or later
+EncodingWrapper is an open-source Swift library that provides a simplified API for encoding detection using the `enca` library. This library allows you to detect the character encoding of data and work with various encoding-related functionalities in a more straightforward manner.
 
 ## Installation
 
-This module doesn't require any additional dependencies other than the `enca` library. Make sure that the `enca` library is properly installed and accessible in your project.
+You can integrate EncodingWrapper into your project using Swift Package Manager (SPM). Simply add the following dependency to your `Package.swift` file:
+
+```swift
+.package(url: "https://github.com/nijel/enca.git", from: "0.1.0"),
+```
 
 ## Usage
 
-### Initializing `EncodingWrapper`
-
-To use the `EncodingWrapper`, you need to create an instance by passing a `Data` object that you want to analyze:
+First, import the required modules:
 
 ```swift
-import EncodingWrapper
-
-let data = Data(...) // Replace with your data
-let encodingWrapper = EncodingWrapper(data)
+import CEnca
 ```
 
-### Detecting Encoding as String
+### Initializing EncodingWrapper
 
-You can asynchronously detect the encoding of the data as a string using the `encodingString()` method:
+The `EncodingWrapper` struct provides a simple way to work with encoding detection. Here's how to initialize it:
+
+```swift
+let data = Data(...) // Your data to be analyzed
+let wrapper = EncodingWrapper(data)
+```
+
+You can also specify a custom `NameStyle` by calling the `style(_:)` method:
+
+```swift
+let customStyle: NameStyle = .rfc1345
+let wrapperWithCustomStyle = wrapper.style(customStyle)
+```
+
+### Detecting Encoding
+
+To detect the encoding of the wrapped data, you can use the `encodingString()` method. This asynchronous method returns the detected encoding name as a result:
 
 ```swift
 do {
-    let encodingName = try await encodingWrapper.encodingString()
-    print("Detected encoding name: \(encodingName)")
+    let detectedEncodingName = try await wrapper.encodingString()
+    print("Detected encoding: \(detectedEncodingName)")
 } catch {
-    print("Encoding detection failed: \(error)")
+    print("Error detecting encoding: \(error)")
 }
 ```
 
-### Detecting Encoding as String.Encoding (Not reliable)
-
-To detect the encoding and get it as a `String.Encoding` value, you can use the `encoding()` method:
+You can also use the `encoding()` method to get the detected `String.Encoding`:
 
 ```swift
 do {
-    let detectedEncoding = try await encodingWrapper.encoding()
+    let detectedEncoding = try await wrapper.encoding()
     print("Detected encoding: \(detectedEncoding)")
 } catch {
-    print("Encoding detection failed: \(error)")
+    print("Error detecting encoding: \(error)")
 }
 ```
 
 ### Error Handling
 
-The module provides a custom `EncodingWrapperError` enum for error handling. It includes cases such as `analyserAllocFailed` and `unknownCharsetName`.
+The `EncodingWrapper` API throws errors that you can catch and handle. The `EncodingWrapperError` enum provides error cases:
 
-### Logging
+- `.analyserAllocFailed`: Failed to allocate an enca analyser.
+- `.memoryBoundUnsafePointerUInt8Failed`: Failed to bind memory for UnsafePointer<UInt8>.
+- `.unkownCharsetName(encoding: Int32)`: Unknown charset name for the given encoding.
 
-The module utilizes the Swift `Logging` framework for logging. You can customize the logging behavior by configuring your logger instance.
+### Additional Notes
 
-## Contribution
+Please note that EncodingWrapper relies on the enca library for encoding detection. Make sure to link the enca library to your project. You can find the original enca library [enca](https://github.com/nijel/enca.git).
 
-Contributions to the `EncodingWrapper` module are welcome. Feel free to open issues, submit pull requests, or provide feedback to improve the functionality and usability of the module.
+## Contributions
+
+Contributions to this open-source project are welcome! Feel free to submit issues or pull requests on the [GitHub repository](https://github.com/0xfeedface1993/CEnca.git).
 
 ## License
 
-This module is released under the [MIT License](LICENSE). Make sure to review the license terms before using this module in your project.
+EncodingWrapper is available under the MIT license. See the [LICENSE](LICENSE) file for more information.

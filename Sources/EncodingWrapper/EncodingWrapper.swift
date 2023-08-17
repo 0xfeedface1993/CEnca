@@ -12,30 +12,44 @@ public enum EncodingWrapperError: Error {
 
 public struct EncodingWrapper {
     public let data: Data
+    public let style: NameStyle
     
-    public init(_ data: Data) {
+    /// Initializes an `EncodingWrapper` with the provided data.
+    /// - Parameter data: The data to be analyzed for encoding detection.
+    public init(_ data: Data, style: NameStyle = .enca) {
         self.data = data
+        self.style = .enca
     }
     
-    @available(macOS 10.15.0, iOS 13.0, *)
+    public func style(_ value: NameStyle) -> Self {
+        .init(data, style: value)
+    }
+    
+    /// Detects the encoding of the wrapped data and returns the encoding name as an asynchronous operation.
+    /// - Returns: An asynchronous operation that resolves to the detected encoding name.
+    @available(macOS 10.15.0, *)
     public func encodingString() async throws -> String {
         let analyser = try analyserAlloctor()
         let buffer = try UnsafeMemory(data).unsafePointerUInt8()
         let encoding = enca_analyse_const(analyser, buffer, data.count)
-        let charsetName = try charset(encoding, style: ENCA_NAME_STYLE_ENCA)
+        let charsetName = try charset(encoding, style: style.encaNameStyle)
         defer {
             enca_analyser_free(analyser)
-            logger.info("detect encoding charset: \(charsetName)")
+            logger.info("detect encoding charset: [\(charsetName)]")
         }
         return charsetName
     }
     
-    @available(macOS 10.15.0, iOS 13.0, *)
+    /// Detects the encoding of the wrapped data and returns the encoding as an asynchronous operation.
+        /// - Returns: An asynchronous operation that resolves to the detected `String.Encoding`.
+    @available(macOS 10.15.0, *)
     public func encoding() async throws -> String.Encoding {
         let name = try await encodingString()
         return EncodingMapper(name).paltformEncoding()
     }
     
+    /// Allocates an enca analyser for encoding detection.
+       /// - Returns: An enca analyser instance.
     @usableFromInline
     func analyserAlloctor() throws -> EncaAnalyser {
         // None
@@ -52,160 +66,23 @@ public struct EncodingWrapper {
         return analyser
     }
     
+    /// Retrieves the charset name for a given encoding and style.
+    /// - Parameters:
+    ///   - encoding: The encoding for which the charset name is to be retrieved.
+    ///   - style: The style in which the charset name should be returned.
+    /// - Returns: The charset name as a String.
     @usableFromInline
     func charset(_ encoding: EncaEncoding, style: EncaNameStyle) throws -> String {
         guard let charsetCString = enca_charset_name(encoding.charset, style) else {
+            throw EncodingWrapperError.unkownCharsetName(encoding: encoding.charset)
+        }
+        if String(cString: charsetCString) == "unkown" {
             throw EncodingWrapperError.unkownCharsetName(encoding: encoding.charset)
         }
         return String(cString: charsetCString)
     }
 }
 
-struct EncodingMapper {
-    let name: String
-    
-    init(_ name: String) {
-        self.name = name
-    }
-    
-    func paltformEncoding() -> String.Encoding {
-        switch name {
-        case "ASCII":
-            return .ascii
-        case "ISO-8859-2":
-            return .isoLatin2
-        case "ISO-8859-4":
-            return CFStringEncodings.isoLatin4.mappingEncoding
-        case "ISO-8859-5":
-            return CFStringEncodings.isoLatin5.mappingEncoding
-        case "ISO-8859-13":
-            return CFStringEncodings.isoLatin7.mappingEncoding
-        case "ISO-8859-16":
-            return CFStringEncodings.isoLatin10.mappingEncoding
-//        enca:CP1125
-//        rfc:CP1125
-//        cstocs:
-//        iconv:@ICONV_NAME_CP1125@
-//        mime:windows-1125
-//        aliases:CP1125 1125 MS-1125 Win-1125 Windows-1125
-//        human:MS-Windows code page 1125
-//        flags:ENCA_CHARSET_8BIT | ENCA_CHARSET_FIXED | ENCA_CHARSET_REGULAR
-//        nsurface:ENCA_SURFACE_EOL_CRLF
-            // OOPS
-        case "CP1125":
-            return .windowsCP1250
-        case "CP1250":
-            return .windowsCP1250
-        case "CP1251":
-            return .windowsCP1251
-        case "CP1257":
-            return CFStringEncodings.windowsBalticRim.mappingEncoding
-        case "IBM852":
-            return CFStringEncodings.dosLatin2.mappingEncoding
-        case "IBM855":
-            return CFStringEncodings.dosCyrillic.mappingEncoding
-        case "IBM775":
-            return CFStringEncodings.dosBalticRim.mappingEncoding
-        case "IBM866":
-            return CFStringEncodings.dosRussian.mappingEncoding
-        case "macce":
-            return CFStringEncodings.macCentralEurRoman.mappingEncoding
-        case "maccyr":
-            return CFStringEncodings.macCyrillic.mappingEncoding
-        case "ECMA-113":
-            return CFStringEncodings.macCyrillic.mappingEncoding
-        case "KOI8-U":
-            return CFStringEncodings.KOI8_U.mappingEncoding
-        case "UCS-2":
-            return .unicode
-        case "UCS-4":
-            return .unicode
-        case "UTF-7":
-            return CFStringEncodings.UTF7.mappingEncoding
-        case "UTF-8":
-            return .utf8
-        case "GBK":
-            return CFStringEncodings.GB_2312_80.mappingEncoding
-        case "BIG5":
-            return CFStringEncodings.big5.mappingEncoding
-        case "HZ":
-            return CFStringEncodings.HZ_GB_2312.mappingEncoding
-            //        enca:baltic
-            //        rfc:iso-ir-179
-            //        cstocs:
-            //        iconv:@ICONV_NAME_BALTIC@
-            //        mime:
-            //        aliases:ISO-IR-179 baltic
-            //        human:ISO-IR-179; Baltic
-            //        flags:ENCA_CHARSET_8BIT | ENCA_CHARSET_FIXED | ENCA_CHARSET_REGULAR
-            //        nsurface:ENCA_SURFACE_EOL_LF
-            // OOPS
-        case "baltic":
-            return CFStringEncodings.windowsBalticRim.mappingEncoding
-            //        enca:KEYBCS2
-            //        rfc:KEYBCS2
-            //        cstocs:kam
-            //        iconv:@ICONV_NAME_KEYBCS2@
-            //        mime:
-            //        aliases:KEYBCS2 Kamenicky kam 895 CP895 PC895 csPC895
-            //        human:Kamenicky encoding; KEYBCS2
-            //        flags:ENCA_CHARSET_8BIT | ENCA_CHARSET_FIXED | ENCA_CHARSET_REGULAR
-            //        nsurface:ENCA_SURFACE_EOL_CRLF
-            // OOPS
-        case "KEYBCS2":
-            return .utf8
-            //
-            //        enca:KOI-8_CS_2
-            //        rfc:KOI-8_CS_2
-            //        cstocs:koi8
-            //        iconv:@ICONV_NAME_KOI8CS2@
-            //        mime:KOI8-CS2
-            //        aliases:KOI-8_CS2 koi8cs koi8cz T602
-            //        human:KOI8-CS2 code (`T602')
-            //        flags:ENCA_CHARSET_8BIT | ENCA_CHARSET_FIXED | ENCA_CHARSET_REGULAR
-            //        nsurface:ENCA_SURFACE_EOL_CRLF
-            // OOPS
-        case "KOI-8_CS_2":
-            return CFStringEncodings.KOI8_R.mappingEncoding
-            //        enca:KOI8-UNI
-            //        rfc:KOI8-UNI
-            //        cstocs:
-            //        iconv:@ICONV_NAME_KOI8UNI@
-            //        mime:
-            //        aliases:KOI8-UNI
-            //        human:KOI8-Unified Cyrillic
-            //        flags:ENCA_CHARSET_8BIT | ENCA_CHARSET_FIXED | ENCA_CHARSET_REGULAR
-            //        nsurface:ENCA_SURFACE_EOL_CRLF
-        case "KOI8-UNI":
-            return CFStringEncodings.KOI8_U.mappingEncoding
-            //        enca:TeX
-            //        rfc:LaTeX
-            //        cstocs: tex
-            //        iconv:@ICONV_NAME_LATEX@
-            //        mime:
-            //        aliases:TeX latex ltex
-            //        human:(La)TeX control sequences
-            //        flags:ENCA_CHARSET_7BIT | ENCA_CHARSET_VARIABLE | ENCA_CHARSET_MULTIBYTE
-            //        nsurface:ENCA_SURFACE_EOL_LF
-        case "TeX":
-            return CFStringEncodings.UTF7.mappingEncoding
-            //        enca:CORK
-            //        rfc:CORK
-            //        cstocs:
-            //        iconv:@ICONV_NAME_CORK@
-            //        mime:
-            //        aliases:Cork T1
-            //        human:Cork encoding; T1
-            //        flags:ENCA_CHARSET_8BIT | ENCA_CHARSET_FIXED | ENCA_CHARSET_REGULAR
-            //        nsurface:
-            // OOPS
-        case "CORK":
-            return .utf8
-        default:
-            return .utf8
-        }
-    }
-}
 
 struct UnsafeMemory {
     let data: Data
@@ -229,8 +106,43 @@ struct UnsafeMemory {
     }
 }
 
+extension EncodingWrapper {
+    /// Bridge of enca charset naming styles and conventions.
+    public enum NameStyle {
+        /// Default, implicit charset name in Enca.
+        case enca
+        /// RFC 1345 or otherwise canonical charset name.
+        case rfc1345
+        /// Cstocs charset name (may not exist).
+        case cstocs
+        /// Iconv charset name (may not exist).
+        case iconv
+        /// Human comprehensible description.
+        case human
+        /// Preferred MIME name (may not exist).
+        case mime
+        
+        var encaNameStyle: EncaNameStyle {
+            switch self {
+            case .enca:
+                return ENCA_NAME_STYLE_ENCA
+            case .rfc1345:
+                return ENCA_NAME_STYLE_RFC1345
+            case .cstocs:
+                return ENCA_NAME_STYLE_CSTOCS
+            case .iconv:
+                return ENCA_NAME_STYLE_ICONV
+            case .human:
+                return ENCA_NAME_STYLE_HUMAN
+            case .mime:
+                return ENCA_NAME_STYLE_MIME
+            }
+        }
+    }
+}
+
 extension CFStringEncodings {
-    /// 生成CFString编码对应的String.Encoding
+    /// Computed property that returns the corresponding String.Encoding for a given CFStringEncodings value.
     public var mappingEncoding: String.Encoding {
         .init(rawValue: UInt(rawValue))
     }
