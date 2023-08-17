@@ -1,0 +1,5 @@
+module CEnca [system] {
+    header "/usr/local/include/enca.h"
+    link "enca"
+    export *
+}

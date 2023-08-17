@@ -1,11 +1,11 @@
 import XCTest
-@testable import CEnca
+@testable import EncodingWrapper
 
 final class CEncaTests: XCTestCase {
-    func testExample() throws {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct
-        // results.
-        XCTAssertEqual(CEnca().text, "Hello, World!")
+    func testEncoding() async throws {
+        let encoding = String.Encoding.utf16
+        let data = "你好".data(using: encoding)!
+        let next = try await EncodingWrapper(data).encoding()
+        XCTAssertEqual(next, encoding)
     }
 }
