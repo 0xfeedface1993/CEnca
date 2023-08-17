@@ -102,7 +102,7 @@ public struct EncodingWrapper {
     @usableFromInline
     func analyserAlloctor() throws -> EncaAnalyser {
         // None
-        let language = "__"
+        let language = "zh"
         var none = language.cString(using: .ascii)!
         let analyser = enca_analyser_alloc(&none)
         guard let analyser = analyser else {
