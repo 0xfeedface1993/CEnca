@@ -10,6 +10,15 @@ public enum EncodingWrapperError: Error {
     case unkownCharsetName(encoding: Int32)
 }
 
+public struct EncodingEncaError: Error, LocalizedError {
+    public let code: Int
+    public let message: String
+    
+    public var errorDescription: String? {
+        message
+    }
+}
+
 public struct EncodingWrapper {
     public let data: Data
     public let style: NameStyle
@@ -25,12 +34,26 @@ public struct EncodingWrapper {
         .init(data, style: value)
     }
     
+    func error(on analyser: EncaAnalyser) throws {
+        let code = enca_errno(analyser)
+        switch code {
+        case Int32(ENCA_EOK.rawValue):
+            break
+        default:
+            guard let message = enca_strerror(analyser, code) else {
+                throw EncodingEncaError(code: Int(code), message: "Unknown Error.")
+            }
+            throw EncodingEncaError(code: Int(code), message: String(cString: message))
+        }
+    }
+    
     /// Detects the encoding of the wrapped data and returns the encoding name as an asynchronous operation.
     /// - Returns: An asynchronous operation that resolves to the detected encoding name.
     public func encodingString() throws -> String {
         let analyser = try analyserAlloctor()
         let buffer = try UnsafeMemory(data).unsafePointerUInt8()
         let encoding = enca_analyse_const(analyser, buffer, data.count)
+        try error(on: analyser)
         let charsetName = try charset(encoding, style: style.encaNameStyle)
         defer {
             enca_analyser_free(analyser)
@@ -64,8 +87,14 @@ public struct EncodingWrapper {
     /// - Returns: An asynchronous operation that resolves to the detected `String.Encoding`.
     @available(macOS 10.15.0, *)
     public func encoding() async throws -> String.Encoding {
-        let name = try await encodingString()
-        return EncodingMapper(name).paltformEncoding()
+        try await withCheckedThrowingContinuation { continuation in
+            do {
+                let value = try encoding()
+                continuation.resume(returning: value)
+            } catch {
+                continuation.resume(throwing: error)
+            }
+        }
     }
     
     /// Allocates an enca analyser for encoding detection.
@@ -96,7 +125,7 @@ public struct EncodingWrapper {
         guard let charsetCString = enca_charset_name(encoding.charset, style) else {
             throw EncodingWrapperError.unkownCharsetName(encoding: encoding.charset)
         }
-        if String(cString: charsetCString) == "unkown" {
+        if String(cString: charsetCString) == "unknown" {
             throw EncodingWrapperError.unkownCharsetName(encoding: encoding.charset)
         }
         return String(cString: charsetCString)
