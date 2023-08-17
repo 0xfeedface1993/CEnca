@@ -27,8 +27,7 @@ public struct EncodingWrapper {
     
     /// Detects the encoding of the wrapped data and returns the encoding name as an asynchronous operation.
     /// - Returns: An asynchronous operation that resolves to the detected encoding name.
-    @available(macOS 10.15.0, *)
-    public func encodingString() async throws -> String {
+    public func encodingString() throws -> String {
         let analyser = try analyserAlloctor()
         let buffer = try UnsafeMemory(data).unsafePointerUInt8()
         let encoding = enca_analyse_const(analyser, buffer, data.count)
@@ -40,8 +39,29 @@ public struct EncodingWrapper {
         return charsetName
     }
     
+    /// Detects the encoding of the wrapped data and returns the encoding name as an asynchronous operation.
+    /// - Returns: An asynchronous operation that resolves to the detected encoding name.
+    @available(macOS 10.15.0, *)
+    public func encodingString() async throws -> String {
+        try await withCheckedThrowingContinuation { continuation in
+            do {
+                let string = try encodingString()
+                continuation.resume(returning: string)
+            } catch {
+                continuation.resume(throwing: error)
+            }
+        }
+    }
+    
     /// Detects the encoding of the wrapped data and returns the encoding as an asynchronous operation.
-        /// - Returns: An asynchronous operation that resolves to the detected `String.Encoding`.
+    /// - Returns: An asynchronous operation that resolves to the detected `String.Encoding`.
+    public func encoding() throws -> String.Encoding {
+        let name = try encodingString()
+        return EncodingMapper(name).paltformEncoding()
+    }
+    
+    /// Detects the encoding of the wrapped data and returns the encoding as an asynchronous operation.
+    /// - Returns: An asynchronous operation that resolves to the detected `String.Encoding`.
     @available(macOS 10.15.0, *)
     public func encoding() async throws -> String.Encoding {
         let name = try await encodingString()
