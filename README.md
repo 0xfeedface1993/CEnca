@@ -1,7 +1,7 @@
 # EncodingWrapper
 
 ![Swift5.8+](https://img.shields.io/badge/Swift-5.8%2B-orange.svg?style=flat)
-![platforms](https://img.shields.io/badge/Platforms-macOS%20%7C%20Linux%20%7C%20-orange.svg?style=flat)
+![platforms](https://img.shields.io/badge/Platforms-macOS%20%7C%20Linux-orange.svg?style=flat)
 [![license](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/0xfeedface1993/CEnca/blob/master/LICENSE)  
 
 EncodingWrapper is an open-source Swift library that provides a simplified API for encoding detection using the `enca` library. This library allows you to detect the character encoding of data and work with various encoding-related functionalities in a more straightforward manner.
