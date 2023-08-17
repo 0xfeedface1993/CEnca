@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import CoreFoundation
 
 struct EncodingMapper {
     let name: String
