@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import CoreFoundation.CFStringEncodingExt
 
 struct EncodingMapper {
     let name: String
